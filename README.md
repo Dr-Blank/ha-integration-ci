@@ -141,3 +141,27 @@ uvx copier update
 ## Versioning
 
 Releases are tagged `vX.Y.Z`, and there is no moving `vX` tag: callers pin a SHA, and `copier update` needs every recorded tag to keep pointing at the commit it was rendered from. A breaking change to inputs or to the expected repository layout bumps the major version.
+
+## Maintaining
+
+Changing a shared workflow (`.github/workflows/`):
+
+1. Commit to `main`, tag `vX.Y.Z` and push the tag.
+2. Dependabot in each integration repository opens a pull request that bumps the SHA pin, on its weekly run or straight away from the repository's Insights > Dependency graph > Dependabot > Check for updates. Merge it once CI passes.
+3. Bump the pin in `template/.github/workflows/` with the next template release. It lags one release because a commit cannot contain its own SHA; repositories already got the bump from Dependabot, and `copier update` sees the same change on both sides.
+
+Changing a template file (`template/`, `copier.yml`):
+
+1. Commit to `main`, tag `vX.Y.Z` and push the tag.
+2. In each integration repository run `uvx copier update`, review `git diff`, resolve any `<<<<<<< before updating` markers, then commit.
+
+Bumping hassfest or the HACS action, which Dependabot cannot do:
+
+```sh
+gh api repos/home-assistant/actions/commits/master --jq .sha
+gh api repos/hacs/action/commits/main --jq .sha
+```
+
+Replace the SHAs in `.github/workflows/validate.yaml`, then release as a shared workflow change.
+
+Never move or reuse a tag: `copier update` re-renders the version recorded in each repository, so a tag that now points elsewhere silently drops template changes.
