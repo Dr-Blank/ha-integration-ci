@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)release, e.g. v1.2.3"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-{% raw %}${{ inputs.tag || github.ref_name }}{% endraw %}
+
+  cancel-in-progress: false
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    uses: Dr-Blank/ha-integration-ci/.github/workflows/release.yaml@15390ee063de87b9bbf0d5cd607adf325866757e # v1.0.0
+    with:
+      tag: {% raw %}${{ inputs.tag || github.ref_name }}{% endraw %}
+
+{% if hacs_ignore %}
+{% if "brands" in hacs_ignore.split() %}
+      # The domain is not in home-assistant/brands, which only accepts
+      # integrations shipped with core.
+{% endif %}
+      hacs-ignore: {{ hacs_ignore }}
+{% endif %}

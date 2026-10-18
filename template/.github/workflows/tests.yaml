@@ -1,0 +1,15 @@
+name: Test
+
+on:
+  workflow_dispatch: ~
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: Dr-Blank/ha-integration-ci/.github/workflows/test.yaml@15390ee063de87b9bbf0d5cd607adf325866757e # v1.0.0

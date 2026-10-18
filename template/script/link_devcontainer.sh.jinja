@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+{% if editable_library %}
+# Link the integration into the Home Assistant devcontainer's config directory
+# and install {{ editable_library }} editable into the container's venv.
+#
+# Requires the devcontainer to bind mount this repository at
+# /workspaces/{{ repo_name }} and the library at /workspaces/{{ editable_library }}. Edits
+# on the host are then live; Home Assistant still needs a restart to pick up
+# changed Python.
+{% else %}
+# Link the integration into the Home Assistant devcontainer's config directory.
+#
+# Requires the devcontainer to bind mount this repository at
+# /workspaces/{{ repo_name }}, so the symlink resolves inside the container. Edits on
+# the host are then live; Home Assistant still needs a restart to pick up
+# changed Python.
+{% endif %}
+set -euo pipefail
+
+DEST="${HA_CORE:-$HOME/projects/ha-core}/config/custom_components"
+{% if editable_library %}
+CONTAINER="${HA_CONTAINER:-$(docker ps --filter label=devcontainer.local_folder="${HA_CORE:-$HOME/projects/ha-core}" --format '{% raw %}{{.Names}}{% endraw %}' | head -n1)}"
+{% endif %}
+
+mkdir -p "$DEST"
+rm -rf "${DEST:?}/{{ domain }}"
+ln -s /workspaces/{{ repo_name }}/custom_components/{{ domain }} "$DEST/{{ domain }}"
+echo "linked $DEST/{{ domain }} -> /workspaces/{{ repo_name }}/custom_components/{{ domain }}"
+{% if editable_library %}
+
+if [ -z "$CONTAINER" ]; then
+  echo "devcontainer not running; install the library later with:" >&2
+  echo "  uv pip install --python /home/vscode/.local/ha-venv/bin/python -e /workspaces/{{ editable_library }}" >&2
+  exit 0
+fi
+docker exec "$CONTAINER" uv pip install --python /home/vscode/.local/ha-venv/bin/python -e /workspaces/{{ editable_library }}
+echo "installed {{ editable_library }} editable in $CONTAINER"
+{% endif %}

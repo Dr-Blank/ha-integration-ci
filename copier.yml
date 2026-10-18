@@ -1,0 +1,41 @@
+_subdirectory: template
+_min_copier_version: "9.0.0"
+_envops:
+  trim_blocks: true
+  lstrip_blocks: true
+
+repo_name:
+  type: str
+  help: GitHub repository name, also the Python project name (e.g. spinev-ha)
+
+domain:
+  type: str
+  help: Integration domain, the folder under custom_components/ (e.g. spinev)
+
+display_name:
+  type: str
+  help: Name shown in HACS (e.g. Spin EV Charger)
+
+description:
+  type: str
+  help: One-line project description for pyproject.toml
+
+homeassistant_min:
+  type: str
+  help: Minimum Home Assistant version for hacs.json
+  default: "2026.3.0"
+
+hacs_ignore:
+  type: str
+  help: Space-separated HACS checks to skip; "brands" for a domain not in home-assistant/brands
+  default: ""
+
+mypy_untyped_modules:
+  type: yaml
+  help: Module patterns mypy cannot type-check, e.g. [aioayla_lan.*]
+  default: []
+
+editable_library:
+  type: str
+  help: Library repo checked out next to this one to install editable in the devcontainer; empty for none
+  default: ""

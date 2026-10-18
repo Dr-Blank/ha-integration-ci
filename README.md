@@ -120,6 +120,24 @@ updates:
 
 `actions/checkout` and `astral-sh/setup-uv` are pinned to release SHAs and bumped by Dependabot. `home-assistant/actions/hassfest` and `hacs/action` have no recent tags, so their SHAs are bumped by hand. Both start a container image that is not pinned (`ghcr.io/home-assistant/hassfest`, `ghcr.io/hacs/action:main`), so validation follows upstream.
 
+## Copier template
+
+The same repository is a [Copier](https://copier.readthedocs.io/) template for the files used outside Actions: the caller workflows above, `dependabot.yml`, `.github/release.yml`, `.pre-commit-config.yaml`, `.vscode/tasks.json`, `.gitignore`, `hacs.json`, `pyproject.toml` and the `script/` helpers (`release.sh`, `generate_translations.py`, `link_devcontainer.sh`).
+
+New repository, or adopting the template in an existing one:
+
+```sh
+uvx copier copy --overwrite gh:Dr-Blank/ha-integration-ci .
+```
+
+Pulling later template changes, as a diff to review:
+
+```sh
+uvx copier update
+```
+
+`copier update` merges three ways, so a line the template never changes keeps the repository's own value. `pyproject.toml` relies on this: `version`, `dependencies` and any extra dev dependencies belong to the repository, and the template only carries placeholders for them. After a first `copier copy --overwrite`, restore those lines (and any repository-specific `.gitignore` entries) before committing.
+
 ## Versioning
 
 Releases are tagged `vX.Y.Z`, and the `vX` tag is moved to the latest release of that major version. A breaking change to inputs or to the expected repository layout bumps the major version.

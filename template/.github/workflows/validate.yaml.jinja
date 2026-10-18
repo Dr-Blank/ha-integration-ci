@@ -1,0 +1,25 @@
+name: Validate
+
+on:
+  workflow_dispatch: ~
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    uses: Dr-Blank/ha-integration-ci/.github/workflows/validate.yaml@15390ee063de87b9bbf0d5cd607adf325866757e # v1.0.0
+{% if hacs_ignore %}
+    with:
+{% if "brands" in hacs_ignore.split() %}
+      # The domain is not in home-assistant/brands, which only accepts
+      # integrations shipped with core.
+{% endif %}
+      hacs-ignore: {{ hacs_ignore }}
+{% endif %}
