@@ -140,4 +140,4 @@ uvx copier update
 
 ## Versioning
 
-Releases are tagged `vX.Y.Z`, and the `vX` tag is moved to the latest release of that major version. A breaking change to inputs or to the expected repository layout bumps the major version.
+Releases are tagged `vX.Y.Z`, and there is no moving `vX` tag: callers pin a SHA, and `copier update` needs every recorded tag to keep pointing at the commit it was rendered from. A breaking change to inputs or to the expected repository layout bumps the major version.
