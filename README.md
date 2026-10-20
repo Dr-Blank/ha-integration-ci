@@ -17,7 +17,7 @@ Reusable GitHub Actions workflows for Home Assistant custom integrations distrib
 
 ## Usage
 
-Each integration repository keeps its own triggers and `permissions`, since a called workflow cannot be granted more than its caller has. Pin to a full commit SHA with the version as a comment, so Dependabot can bump it.
+Each integration repository keeps its own triggers and `permissions`, since a called workflow cannot be granted more than its caller has. Pin to a full commit SHA with the version as a comment, so Renovate can bump it.
 
 `.github/workflows/tests.yaml`:
 
@@ -96,16 +96,7 @@ jobs:
       hacs-ignore: brands
 ```
 
-`.github/dependabot.yml`:
-
-```yaml
-version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-```
+`.github/renovate.json`: copy [`template/.github/renovate.json`](template/.github/renovate.json). Minor, patch and digest updates merge once CI passes; the integration's own requirements in `manifest.json` and `pyproject.toml` are grouped and always wait for review.
 
 ## Inputs
 
@@ -118,11 +109,11 @@ updates:
 
 ## Pinned actions
 
-`actions/checkout` and `astral-sh/setup-uv` are pinned to release SHAs and bumped by Dependabot. `home-assistant/actions/hassfest` and `hacs/action` have no recent tags, so their SHAs are bumped by hand. Both start a container image that is not pinned (`ghcr.io/home-assistant/hassfest`, `ghcr.io/hacs/action:main`), so validation follows upstream.
+`actions/checkout` and `astral-sh/setup-uv` are pinned to release SHAs and bumped by Renovate. `home-assistant/actions/hassfest` and `hacs/action` have no recent tags, so their SHAs are bumped by hand. Both start a container image that is not pinned (`ghcr.io/home-assistant/hassfest`, `ghcr.io/hacs/action:main`), so validation follows upstream.
 
 ## Copier template
 
-The same repository is a [Copier](https://copier.readthedocs.io/) template for the files used outside Actions: the caller workflows above, `dependabot.yml`, `.github/release.yml`, `.pre-commit-config.yaml`, `.vscode/tasks.json`, `.gitignore`, `hacs.json`, `pyproject.toml` and the `script/` helpers (`release.sh`, `generate_translations.py`, `link_devcontainer.sh`).
+The same repository is a [Copier](https://copier.readthedocs.io/) template for the files used outside Actions: the caller workflows above, `.github/renovate.json`, `.github/release.yml`, `.pre-commit-config.yaml`, `.vscode/tasks.json`, `.gitignore`, `hacs.json`, `pyproject.toml` and the `script/` helpers (`release.sh`, `generate_translations.py`, `link_devcontainer.sh`).
 
 New repository, or adopting the template in an existing one:
 
@@ -147,15 +138,15 @@ Releases are tagged `vX.Y.Z`, and there is no moving `vX` tag: callers pin a SHA
 Changing a shared workflow (`.github/workflows/`):
 
 1. Commit to `main`, tag `vX.Y.Z` and push the tag.
-2. Dependabot in each integration repository opens a pull request that bumps the SHA pin, on its weekly run or straight away from the repository's Insights > Dependency graph > Dependabot > Check for updates. Merge it once CI passes.
-3. Bump the pin in `template/.github/workflows/` with the next template release. It lags one release because a commit cannot contain its own SHA; repositories already got the bump from Dependabot, and `copier update` sees the same change on both sides.
+2. Renovate in each integration repository opens a pull request that bumps the SHA pin, on its weekly run or straight away from the Dependency Dashboard issue. A minor or patch bump merges itself once CI passes; merge a major one by hand.
+3. Bump the pin in `template/.github/workflows/` with the next template release. It lags one release because a commit cannot contain its own SHA; repositories already got the bump from Renovate, and `copier update` sees the same change on both sides.
 
 Changing a template file (`template/`, `copier.yml`):
 
 1. Commit to `main`, tag `vX.Y.Z` and push the tag.
 2. In each integration repository run `uvx copier update`, review `git diff`, resolve any `<<<<<<< before updating` markers, then commit.
 
-Bumping hassfest or the HACS action, which Dependabot cannot do:
+Bumping hassfest or the HACS action, which have no tags to track:
 
 ```sh
 gh api repos/home-assistant/actions/commits/master --jq .sha
