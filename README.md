@@ -118,7 +118,7 @@ The same repository is a [Copier](https://copier.readthedocs.io/) template for t
 New repository, or adopting the template in an existing one:
 
 ```sh
-uvx copier copy --overwrite gh:Dr-Blank/ha-integration-ci .
+uvx copier copy --overwrite https://github.com/Dr-Blank/ha-integration-ci .
 ```
 
 Pulling later template changes, as a diff to review:
