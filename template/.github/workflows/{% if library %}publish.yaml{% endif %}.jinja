@@ -1,0 +1,63 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)publish, e.g. v1.2.3"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: publish-{% raw %}${{ inputs.tag || github.ref_name }}{% endraw %}
+
+  cancel-in-progress: false
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    uses: Dr-Blank/ha-integration-ci/.github/workflows/library-build.yaml@8bb8dd71791ffd3f07acbb90fea6ecbd63a03683 # v1.3.0
+    with:
+      tag: {% raw %}${{ inputs.tag || github.ref_name }}{% endraw %}
+
+      python-version: "{{ python_versions[-1] }}"
+
+  # PyPI trusted publishing names this workflow file and environment, so the
+  # upload cannot move into the shared workflow.
+  publish:
+    name: Publish to PyPI
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/{{ repo_name }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          # A manual re-run for a tag whose files already reached PyPI still
+          # goes on to create the GitHub release.
+          skip-existing: true
+
+  github-release:
+    needs: [build, publish]
+    permissions:
+      contents: write
+    uses: Dr-Blank/ha-integration-ci/.github/workflows/github-release.yaml@8bb8dd71791ffd3f07acbb90fea6ecbd63a03683 # v1.3.0
+    with:
+      tag: {% raw %}${{ inputs.tag || github.ref_name }}{% endraw %}
+
+      artifact: dist

@@ -16,6 +16,10 @@
   },
   "pre-commit": {
     "enabled": true
+{% if library %}
+  }
+}
+{% else %}
   },
   "homeassistant-manifest": {
     "managerFilePatterns": ["/^custom_components/[^/]+/manifest\\.json$/"]
@@ -57,3 +61,4 @@
     }
   ]
 }
+{% endif %}

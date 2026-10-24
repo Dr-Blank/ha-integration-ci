@@ -1,0 +1,26 @@
+name: Test
+
+on:
+  workflow_dispatch: ~
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+{% if library %}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [{% for version in python_versions %}"{{ version }}"{{ ", " if not loop.last }}{% endfor %}]
+    uses: Dr-Blank/ha-integration-ci/.github/workflows/test.yaml@8bb8dd71791ffd3f07acbb90fea6ecbd63a03683 # v1.3.0
+    with:
+      python-version: {% raw %}${{ matrix.python-version }}{% endraw %}
+
+{% else %}
+    uses: Dr-Blank/ha-integration-ci/.github/workflows/test.yaml@8bb8dd71791ffd3f07acbb90fea6ecbd63a03683 # v1.3.0
+{% endif %}

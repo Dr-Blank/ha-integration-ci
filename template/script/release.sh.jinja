@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+{% if library %}
+# Set the version in pyproject.toml (and uv.lock when it is tracked), commit it
+# as chore(release), and create the matching annotated git tag. Nothing is
+# pushed.
+#
+# Usage: release.sh <major|minor|patch|X.Y.Z>
+#
+# The Publish workflow refuses a tag that disagrees with pyproject.toml, so the
+# tag is always derived from the version written here.
+{% else %}
 # Set the version in pyproject.toml, the integration manifest (and uv.lock when
 # it is tracked), commit it as chore(release), and create the matching
 # annotated git tag. Nothing is pushed.
@@ -8,13 +18,16 @@
 # Home Assistant reads the version from custom_components/{{ domain }}/manifest.json
 # and HACS offers an update when a new tag is released, so the files have to
 # agree with the tag. The Release workflow refuses a tag that does not.
+{% endif %}
 set -euo pipefail
 
 usage="usage: release.sh <major|minor|patch|X.Y.Z>"
 bump="${1:?$usage}"
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+{% if integration %}
 manifest="custom_components/{{ domain }}/manifest.json"
+{% endif %}
 cd "$repo"
 
 if [ -n "$(git status --porcelain)" ]; then
@@ -22,7 +35,7 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-files=(pyproject.toml "$manifest")
+files=(pyproject.toml{% if integration %} "$manifest"{% endif %})
 uv_args=()
 if git ls-files --error-unmatch uv.lock >/dev/null 2>&1; then
   files+=(uv.lock)
@@ -49,6 +62,7 @@ if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
   exit 1
 fi
 
+{% if integration %}
 python3 - "$manifest" "$version" <<'PY'
 import pathlib
 import re
@@ -61,6 +75,7 @@ if count != 1:
     sys.exit(f"expected one version key in {path}, found {count}")
 path.write_text(patched)
 PY
+{% endif %}
 
 # An explicit version that is already the current one leaves nothing to commit,
 # which is how an existing version gets its first tag.
@@ -73,4 +88,8 @@ git tag -a "${tag}" -m "${tag}"
 
 echo "version ${version}, tagged ${tag}"
 echo "run the 'Release: Push Tags to Origin' task (or 'git push --follow-tags origin main') to publish"
+{% if library %}
+echo "CI verifies the tag, lints, tests, builds, publishes to PyPI, then creates the GitHub release"
+{% else %}
 echo "CI verifies the tag against both versions, lints, tests, runs hassfest, then creates the GitHub release"
+{% endif %}

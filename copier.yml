@@ -3,18 +3,49 @@ _min_copier_version: "9.0.0"
 _envops:
   trim_blocks: true
   lstrip_blocks: true
+# A library's tool configuration belongs to the library: the template only
+# starts these files in a new repository.
+_skip_if_exists:
+  - "{% if library %}pyproject.toml{% endif %}"
+  - "{% if library %}.pre-commit-config.yaml{% endif %}"
+
+project_type:
+  type: str
+  help: A Home Assistant custom integration for HACS, or a Python library published to PyPI
+  choices:
+    - integration
+    - library
+  default: integration
+
+integration:
+  type: bool
+  default: "{{ project_type == 'integration' }}"
+  when: false
+
+library:
+  type: bool
+  default: "{{ project_type == 'library' }}"
+  when: false
 
 repo_name:
   type: str
-  help: GitHub repository name, also the Python project name (e.g. spinev-ha)
+  help: GitHub repository name, also the Python project name, and the PyPI name for a library (e.g. spinev-ha, spinev-ble)
 
 domain:
   type: str
   help: Integration domain, the folder under custom_components/ (e.g. spinev)
+  when: "{{ integration }}"
 
 display_name:
   type: str
   help: Name shown in HACS (e.g. Spin EV Charger)
+  when: "{{ integration }}"
+
+package:
+  type: str
+  help: Import name, the folder under src/ (e.g. spinev_ble)
+  default: "{{ repo_name | replace('-', '_') }}"
+  when: "{{ library }}"
 
 description:
   type: str
@@ -24,11 +55,31 @@ homeassistant_min:
   type: str
   help: Minimum Home Assistant version for hacs.json
   default: "2026.3.0"
+  when: "{{ integration }}"
 
 hacs_ignore:
   type: str
   help: Space-separated HACS checks to skip; "brands" for a domain not in home-assistant/brands
   default: ""
+  when: "{{ integration }}"
+
+python_versions:
+  type: yaml
+  help: Supported Python versions as quoted strings, oldest first; CI tests each, a release tests the last
+  default: ["3.12", "3.13", "3.14"]
+  when: "{{ library }}"
+
+license:
+  type: str
+  help: SPDX license expression for pyproject.toml, matching the LICENSE file
+  default: MIT
+  when: "{{ library }}"
+
+pylint:
+  type: bool
+  help: Run pylint on the package as a hook, besides ruff and mypy
+  default: false
+  when: "{{ library }}"
 
 mypy_untyped_modules:
   type: yaml
@@ -39,3 +90,4 @@ editable_library:
   type: str
   help: Library repo checked out next to this one to install editable in the devcontainer; empty for none
   default: ""
+  when: "{{ integration }}"

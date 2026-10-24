@@ -1,0 +1,48 @@
+# Tools run from the project environment, so hooks, CI and uv.lock agree on versions.
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: builtin
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        exclude: ^uv\.lock$
+      - id: detect-private-key
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --no-sync ruff check --fix
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --no-sync ruff format
+        language: system
+        types_or: [python, pyi]
+      - id: mypy
+        name: mypy
+        entry: uv run --no-sync mypy
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+{% if pylint %}
+      - id: pylint
+        name: pylint
+        entry: uv run --no-sync pylint src/{{ package }}
+        language: system
+        types: [python]
+        pass_filenames: false
+{% endif %}
+      # Too slow for every commit; CI runs it with --hook-stage manual.
+      - id: pytest
+        name: pytest
+        entry: uv run --no-sync pytest --cov
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push, manual]
