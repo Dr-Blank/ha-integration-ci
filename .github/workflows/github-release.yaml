@@ -1,0 +1,148 @@
+name: GitHub release
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Existing tag to release, e.g. v1.2.3"
+        required: true
+        type: string
+      artifact:
+        description: "Name of an artifact from the same run to attach; empty for none"
+        required: false
+        type: string
+        default: ""
+
+permissions: {}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - if: inputs.artifact != ''
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.artifact }}
+          path: ${{ runner.temp }}/assets/
+
+      # Groups the commits since the previous tag by Conventional Commits
+      # type. gh release create prepends this to GitHub's generated notes,
+      # which list the merged pull requests.
+      - name: Write the release notes
+        env:
+          TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if previous="$(git describe --tags --abbrev=0 --match 'v*' "${TAG}^" 2>/dev/null)"; then
+            range="${previous}..${TAG}"
+          else
+            previous=""
+            range="${TAG}"
+          fi
+
+          declare -A sections=()
+          breaking=""
+
+          while IFS=$'\t' read -r sha subject; do
+            [ -n "$sha" ] || continue
+            short="${sha:0:7}"
+            if [[ "$subject" =~ ^([a-z]+)(\(([^\)]+)\))?(!)?:[[:space:]]+(.+)$ ]]; then
+              type="${BASH_REMATCH[1]}"
+              scope="${BASH_REMATCH[3]}"
+              bang="${BASH_REMATCH[4]}"
+              description="${BASH_REMATCH[5]}"
+            else
+              type="other"
+              scope=""
+              bang=""
+              description="$subject"
+            fi
+
+            # The version bump commit carries no change of its own.
+            if [ "$type" = "chore" ] && [ "$scope" = "release" ]; then
+              continue
+            fi
+
+            line="- ${scope:+**${scope}:** }${description} (${short})"
+            if [ -n "$bang" ] || grep -q '^BREAKING[ -]CHANGE:' <<<"$(git log -1 --format=%B "$sha")"; then
+              breaking+="${line}"$'\n'
+              continue
+            fi
+
+            case "$type" in
+              feat) key="feat" ;;
+              fix) key="fix" ;;
+              perf) key="perf" ;;
+              refactor) key="refactor" ;;
+              docs) key="docs" ;;
+              build | ci | chore | style | test) key="maintenance" ;;
+              *) key="other" ;;
+            esac
+            sections[$key]+="${line}"$'\n'
+          done < <(git log --no-merges --format='%H%x09%s' "$range")
+
+          print_section() {
+            local title="$1" body="$2"
+            if [ -n "$body" ]; then
+              printf '### %s\n\n%s\n' "$title" "$body"
+            fi
+          }
+
+          {
+            if [ -n "$previous" ]; then
+              printf '## Commits since %s\n\n' "$previous"
+            else
+              printf '## Commits\n\n'
+            fi
+            if [ ${#sections[@]} -eq 0 ] && [ -z "$breaking" ]; then
+              printf 'No changes besides the version bump.\n'
+            fi
+            print_section "Breaking changes" "$breaking"
+            print_section "Features" "${sections[feat]:-}"
+            print_section "Fixes" "${sections[fix]:-}"
+            print_section "Performance" "${sections[perf]:-}"
+            print_section "Refactoring" "${sections[refactor]:-}"
+            print_section "Documentation" "${sections[docs]:-}"
+            print_section "Maintenance" "${sections[maintenance]:-}"
+            print_section "Other changes" "${sections[other]:-}"
+          } > "$RUNNER_TEMP/notes.md"
+
+      # A re-run for a tag that is already released only refreshes its assets,
+      # so the notes of a published release are never rewritten.
+      - name: Create the GitHub release if it is missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          ARTIFACT: ${{ inputs.artifact }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          assets=()
+          if [ -n "$ARTIFACT" ]; then
+            assets=("$RUNNER_TEMP"/assets/*)
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            if [ ${#assets[@]} -gt 0 ]; then
+              echo "release $TAG already exists, refreshing its assets"
+              gh release upload "$TAG" "${assets[@]}" --clobber
+            else
+              echo "release $TAG already exists, skipping"
+            fi
+            exit 0
+          fi
+          gh release create "$TAG" "${assets[@]}" \
+            --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --generate-notes \
+            --verify-tag
