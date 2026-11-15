@@ -3,9 +3,9 @@ name: Validate
 on:
   workflow_dispatch: ~
   push:
-    branches: [main]
+    branches: [{{ default_branch }}]
   pull_request:
-    branches: [main]
+    branches: [{{ default_branch }}]
   schedule:
     - cron: "0 4 * * 1"
 

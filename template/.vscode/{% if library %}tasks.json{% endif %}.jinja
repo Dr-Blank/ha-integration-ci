@@ -11,12 +11,18 @@
         "major"
       ],
       "default": "patch"
+    },
+    {
+      "id": "releaseTag",
+      "type": "promptString",
+      "description": "Existing tag to (re)publish, e.g. v1.2.3",
+      "default": ""
     }
   ],
   "tasks": [
     {
       "label": "Release: Bump Version & Tag",
-      "detail": "Bumps pyproject.toml, uv.lock and manifest.json, commits chore(release), and creates the vX.Y.Z tag locally.",
+      "detail": "Bumps pyproject.toml and uv.lock, commits chore(release), and creates the vX.Y.Z tag locally.",
       "type": "shell",
       "command": "./script/release.sh ${input:bumpType}",
       "problemMatcher": [],
@@ -27,9 +33,20 @@
     },
     {
       "label": "Release: Push Tags to Origin",
-      "detail": "Pushes the release commit and its tag, which triggers the Release workflow.",
+      "detail": "Pushes the release commit and its tag, which triggers the Publish workflow.",
       "type": "shell",
-      "command": "git push --follow-tags origin main",
+      "command": "git push --follow-tags origin {{ default_branch }}",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Release: Publish Existing Tag",
+      "detail": "Re-runs the Publish workflow for a tag, e.g. after a failed run. Files already on PyPI are skipped.",
+      "type": "shell",
+      "command": "gh workflow run publish.yaml -f tag=${input:releaseTag}",
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
@@ -38,7 +55,7 @@
     },
     {
       "label": "Test",
-      "detail": "Runs the integration test suite.",
+      "detail": "Runs the library test suite.",
       "type": "shell",
       "command": "uv run pytest",
       "group": "test",

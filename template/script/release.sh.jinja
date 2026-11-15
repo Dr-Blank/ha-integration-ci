@@ -35,6 +35,20 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
+branch="$(git symbolic-ref --quiet --short HEAD || true)"
+if [ "$branch" != {{ default_branch }} ]; then
+  echo "releases are cut from {{ default_branch }}, currently on ${branch:-a detached HEAD}" >&2
+  exit 1
+fi
+
+# Unpushed local commits are fine, they go out with the tag.
+git fetch --quiet --tags origin {{ default_branch }}
+behind="$(git rev-list --count HEAD..origin/{{ default_branch }})"
+if [ "$behind" -gt 0 ]; then
+  echo "{{ default_branch }} is ${behind} commit(s) behind origin/{{ default_branch }}, pull first" >&2
+  exit 1
+fi
+
 files=(pyproject.toml{% if integration %} "$manifest"{% endif %})
 uv_args=()
 if git ls-files --error-unmatch uv.lock >/dev/null 2>&1; then
@@ -87,7 +101,7 @@ fi
 git tag -a "${tag}" -m "${tag}"
 
 echo "version ${version}, tagged ${tag}"
-echo "run the 'Release: Push Tags to Origin' task (or 'git push --follow-tags origin main') to publish"
+echo "run the 'Release: Push Tags to Origin' task (or 'git push --follow-tags origin {{ default_branch }}') to publish"
 {% if library %}
 echo "CI verifies the tag, lints, tests, builds, publishes to PyPI, then creates the GitHub release"
 {% else %}

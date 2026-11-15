@@ -31,6 +31,14 @@ repo_name:
   type: str
   help: GitHub repository name, also the Python project name, and the PyPI name for a library (e.g. spinev-ha, spinev-ble)
 
+default_branch:
+  type: str
+  help: Branch CI runs on and releases are cut from
+  choices:
+    - main
+    - master
+  default: main
+
 domain:
   type: str
   help: Integration domain, the folder under custom_components/ (e.g. spinev)
