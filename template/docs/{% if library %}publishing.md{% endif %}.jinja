@@ -33,7 +33,7 @@ CI installs with `uv sync --locked`, so commit a lockfile: run `uv lock` and com
 
 ## Releasing
 
-1. Run `script/release.sh <major|minor|patch|X.Y.Z>` (or the VS Code task Release: Bump Version & Tag). It sets the version in `pyproject.toml` and `uv.lock`, commits `chore(release): vX.Y.Z`, and creates the annotated `vX.Y.Z` tag. Nothing is pushed. For the first release the version is already `0.1.0`, so run `script/release.sh 0.1.0` to tag it without a bump.
+1. Run `script/release.sh <auto|major|minor|patch|X.Y.Z>` (or the VS Code task Release: Bump Version & Tag). `auto` picks the bump from the Conventional Commits since the last tag: a breaking change (`type!:` or a `BREAKING CHANGE:` footer) is major, or minor before 1.0.0, a `feat` is minor, anything else is patch. It sets the version in `pyproject.toml` and `uv.lock`, commits `chore(release): vX.Y.Z`, and creates the annotated `vX.Y.Z` tag. Nothing is pushed. For the first release the version is already `0.1.0`, so run `script/release.sh 0.1.0` to tag it without a bump.
 2. Push with `git push --follow-tags origin {{ default_branch }}` (or the task Release: Push Tags to Origin).
 3. The Publish workflow checks that the tag matches `pyproject.toml`, runs every prek hook (`.pre-commit-config.yaml`, tests included) on Python {{ python_versions[-1] }}, builds the sdist and wheel, uploads them to PyPI, and then creates the GitHub release with both files attached.
 
